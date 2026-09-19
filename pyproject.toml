@@ -1,0 +1,23 @@
+[project]
+name = "an-aggregator-service-for-events-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "“HromoSom”", email = "“temur.haydarov@gmail.com”" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "uvicorn>=0.53.0",
+]
+
+[project.scripts]
+an-aggregator-service-for-events-api = "an_aggregator_service_for_events_api:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
