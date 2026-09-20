@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     debug: bool = False
     port: int = 8000
 
+    events_provider_base_url: str
     events_provider_api_key: SecretStr = SecretStr('')
+    events_provider_timeout: float = 10.0
+    events_provider_max_retries: int = 3
 
     database_url: str = (
         'postgresql+asyncpg://postgres:postgres@localhost:5432/events'
