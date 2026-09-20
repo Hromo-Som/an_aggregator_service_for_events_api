@@ -46,6 +46,7 @@ class EventsProviderClient(BaseAPIClient):
             params["changed_at"] = changed_at
 
         data = await self._request("GET", "/events/", params=params)
+
         return self._parse(EventsPage, data)
 
     async def get_available_seats(

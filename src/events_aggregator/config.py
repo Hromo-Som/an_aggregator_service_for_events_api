@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     database_url: str = (
         'postgresql+asyncpg://postgres:postgres@localhost:5432/events'
     )
+    db_echo: bool = False
+    db_pool_size: int = 20
+    db_max_overflow: int = 10
 
     http_timeout: float = 10.0
 
