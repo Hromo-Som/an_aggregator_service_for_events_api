@@ -72,12 +72,6 @@ class SProviderRegistration(BaseModel):
     ticket_id: UUID
 
 
-class SProviderCancellationRequest(BaseModel):
-    """Тело запроса на отмену регистрации."""
-
-    ticket_id: UUID
-
-
 class SProviderCancellationResponse(BaseModel):
     """Ответ на отмену регистрации."""
 

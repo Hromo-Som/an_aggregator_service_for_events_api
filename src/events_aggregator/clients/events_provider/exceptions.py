@@ -1,4 +1,9 @@
-class EventsProviderError(Exception):
+import httpx
+
+from events_aggregator.clients.exceptions import APIClientError
+
+
+class EventsProviderError(APIClientError):
     """Базовая ошибка при работе с Events Provider API."""
 
     def __init__(self, message: str, status_code: int | None = None):
@@ -23,7 +28,7 @@ class ProviderRateLimited(EventsProviderError):
     """Превышен лимит запросов (429)."""
 
     def __init__(self, message: str, retry_after: float | None = None):
-        super().__init__(message, status_code=429)
+        super().__init__(message, status_code=httpx.codes.TOO_MANY_REQUESTS)
         self.retry_after = retry_after
 
 
