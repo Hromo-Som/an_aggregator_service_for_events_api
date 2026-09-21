@@ -21,6 +21,11 @@ class Settings(BaseSettings):
 
     http_timeout: float = 10.0
 
+    sync_enabled: bool = True
+    sync_hour: int = 3
+    sync_batch_size: int = 200
+    sync_first_date: str = "2000-01-01"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -42,7 +43,7 @@ class EventORM(Base):
     __table_args__ = (Index("ix_events_city_event_time", "place_city", "event_time"),)
 
     def __repr__(self) -> str:
-        return f"<EventModel id={self.id} name={self.name!r}>"
+        return f"<EventORM id={self.id} name={self.name!r}>"
 
 
 class TicketORM(Base):
@@ -65,4 +66,19 @@ class TicketORM(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<TicketModel id={self.ticket_id} event={self.event_id}>"
+        return f"<TicketORM id={self.ticket_id} event={self.event_id}>"
+
+
+class SyncMetadataORM(Base):
+    """Метаданные синхронизации. Всегда одна строка с id=1."""
+
+    __tablename__ = "sync_metadata"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    last_sync_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sync_status: Mapped[str] = mapped_column(String(20))
+    last_error: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (CheckConstraint("id = 1", name="ck_sync_metadata_single_row"),)

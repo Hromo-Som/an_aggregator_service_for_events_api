@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+from urllib.parse import urlparse
 from uuid import UUID
 
 import httpx
@@ -16,6 +18,7 @@ from .schemas import (
     EventsPage,
     SProviderAvailableSeats,
     SProviderCancellationResponse,
+    SProviderEvent,
     SProviderRegistration,
     SProviderRegistrationCreate,
 )
@@ -23,6 +26,8 @@ from .schemas import (
 
 class EventsProviderClient(BaseAPIClient):
     """Асинхронный клиент для Events Provider API."""
+
+    MAX_PAGES = 100
 
     def __init__(
         self,
@@ -103,3 +108,38 @@ class EventsProviderClient(BaseAPIClient):
             return ProviderServerError(message=message, status_code=status)
 
         return EventsProviderError(message=message, status_code=status)
+
+    async def iter_all_events(
+        self,
+        changed_at: str | None = None,
+    ) -> AsyncIterator[SProviderEvent]:
+        """Асинхронный итератор по всем страницам событий."""
+        page = await self.get_events_list(changed_at=changed_at)
+
+        for event in page.results:
+            yield event
+
+        pages_seen = 1
+        while page.next:
+            if pages_seen >= self.MAX_PAGES:
+                raise EventsProviderError(f"Pagination exceeded {self.MAX_PAGES} pages")
+
+            self._ensure_same_host(page.next)
+
+            data = await self._request("GET", page.next)
+            page = self._parse(EventsPage, data)
+
+            for event in page.results:
+                yield event
+
+            pages_seen += 1
+
+    def _ensure_same_host(self, url: str) -> None:
+        """Защита от SSRF: `next` должен вести на тот же хост."""
+        base_host = urlparse(self._base_url).netloc
+        target_host = urlparse(url).netloc
+        if base_host != target_host:
+            raise EventsProviderError(
+                f"Pagination link points to a different host: "
+                f"{target_host} (expected {base_host})"
+            )
