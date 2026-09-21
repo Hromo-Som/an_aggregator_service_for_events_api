@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import (
 
 from events_aggregator.config import settings
 
-
 engine: AsyncEngine = create_async_engine(
     url=settings.database_url,
     echo=settings.db_echo,
@@ -29,8 +28,9 @@ async_session = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     async with async_session() as session:
         yield session
+
 
 SessionDep = Annotated[AsyncSession, Depends(get_db)]

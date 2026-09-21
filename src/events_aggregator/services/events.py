@@ -68,4 +68,4 @@ class EventService:
         if date_from is not None:
             params["date_from"] = date_from.isoformat()
 
-        return f"{base_url}/?{urlencode(params)}"
+        return f"{base_url}?{urlencode(params)}"
