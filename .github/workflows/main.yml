@@ -31,6 +31,7 @@ jobs:
     - name: Test with ruff and tests
       env:
         DATABASE_URL: postgresql+asyncpg://aggregator_user:${{ secrets.DB_PASSWORD }}@127.0.0.1:5432/aggregator_db
+        EVENTS_PROVIDER_BASE_URL: http://test-provider.local/api
       run: |
         uv run ruff format --check src/ tests/
         uv run ruff check src/ tests/
