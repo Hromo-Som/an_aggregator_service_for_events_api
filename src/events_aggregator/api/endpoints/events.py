@@ -1,9 +1,14 @@
 from datetime import date
+from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 
 from events_aggregator.dependencies import EventServiceDep
-from events_aggregator.schemas.event import SEventPageRead
+from events_aggregator.schemas.event import (
+    SEventDetailRead,
+    SEventPageRead,
+    SEventSeatsRead,
+)
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -36,3 +41,15 @@ async def list_events(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get("/{event_id}", response_model=SEventDetailRead)
+async def get_event(event_id: UUID, service: EventServiceDep) -> SEventDetailRead:
+    """Детали события по ID."""
+    return await service.get_event(event_id)
+
+
+@router.get("/{event_id}/seats", response_model=SEventSeatsRead)
+async def get_event_seats(event_id: UUID, service: EventServiceDep) -> SEventSeatsRead:
+    """Свободные места. Кэш 30 секунд."""
+    return await service.get_available_seats(event_id)

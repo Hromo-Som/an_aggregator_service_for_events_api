@@ -14,7 +14,6 @@ router = APIRouter(prefix="/sync", tags=["sync"])
     "/trigger",
     response_model=SSyncResultRead,
     status_code=status.HTTP_200_OK,
-    summary="Запустить синхронизацию вручную",
 )
 async def trigger_sync(
     service: SyncServiceDep,
