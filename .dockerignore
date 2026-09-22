@@ -22,4 +22,3 @@ docs/
 Dockerfile
 docker-compose*.yml
 .dockerignore
-docker/
