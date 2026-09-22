@@ -34,7 +34,7 @@ jobs:
       run: |
         uv run ruff format --check src/ tests/
         uv run ruff check src/ tests/
-        run: uv run pytest -v --tb=short
+        uv run pytest -v --tb=short
 
   build:
     needs: tests
