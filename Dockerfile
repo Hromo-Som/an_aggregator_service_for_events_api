@@ -38,6 +38,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
+RUN chmod +x /app/entrypoint.sh
+
 USER appuser
 
 EXPOSE 8000
