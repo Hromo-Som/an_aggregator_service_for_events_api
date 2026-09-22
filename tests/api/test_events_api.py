@@ -54,25 +54,25 @@ async def test_list_events_passes_query_params(
     assert call_kwargs["date_from"] == date(2026, 1, 1)
 
 
-async def test_list_events_page_zero_returns_422(
+async def test_list_events_page_zero_returns_400(
     api_client: AsyncClient,
 ) -> None:
     response = await api_client.get("/api/events?page=0")
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST
 
 
-async def test_list_events_page_size_too_large_returns_422(
+async def test_list_events_page_size_too_large_returns_400(
     api_client: AsyncClient,
 ) -> None:
     response = await api_client.get("/api/events?page_size=1000")
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST
 
 
-async def test_list_events_invalid_date_returns_422(
+async def test_list_events_invalid_date_returns_400(
     api_client: AsyncClient,
 ) -> None:
     response = await api_client.get("/api/events?date_from=not-a-date")
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST
 
 
 async def test_get_event_success(
@@ -116,11 +116,11 @@ async def test_get_event_not_found(
     assert "Event not found" in response.json()["detail"]
 
 
-async def test_get_event_invalid_uuid_returns_422(
+async def test_get_event_invalid_uuid_returns_400(
     api_client: AsyncClient,
 ) -> None:
     response = await api_client.get("/api/events/not-a-uuid")
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST
 
 
 async def test_get_seats_success(

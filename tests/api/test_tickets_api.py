@@ -81,16 +81,16 @@ async def test_register_deadline_passed(
     assert response.status_code == codes.BAD_REQUEST
 
 
-async def test_register_invalid_email_returns_422(
+async def test_register_invalid_email_returns_400(
     api_client: AsyncClient,
 ) -> None:
     response = await api_client.post(
         "/api/tickets", json=_payload(email="not-an-email")
     )
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST
 
 
-async def test_register_missing_field_returns_422(
+async def test_register_missing_field_returns_400(
     api_client: AsyncClient,
 ) -> None:
     payload = _payload()
@@ -98,23 +98,23 @@ async def test_register_missing_field_returns_422(
 
     response = await api_client.post("/api/tickets", json=payload)
 
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST
 
 
-async def test_register_invalid_event_id_returns_422(
+async def test_register_invalid_event_id_returns_400(
     api_client: AsyncClient,
 ) -> None:
     response = await api_client.post(
         "/api/tickets", json=_payload(event_id="not-a-uuid")
     )
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST
 
 
-async def test_register_empty_first_name_returns_422(
+async def test_register_empty_first_name_returns_400(
     api_client: AsyncClient,
 ) -> None:
     response = await api_client.post("/api/tickets", json=_payload(first_name=""))
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST
 
 
 async def test_unregister_success(
@@ -145,8 +145,8 @@ async def test_unregister_not_found(
     assert response.status_code == codes.NOT_FOUND
 
 
-async def test_unregister_invalid_uuid_returns_422(
+async def test_unregister_invalid_uuid_returns_400(
     api_client: AsyncClient,
 ) -> None:
     response = await api_client.delete("/api/tickets/not-a-uuid")
-    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert response.status_code == codes.BAD_REQUEST

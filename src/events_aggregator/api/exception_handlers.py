@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from events_aggregator.clients.events_provider.exceptions import (
@@ -57,7 +58,19 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
     )
 
 
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    """Переопределяем 422 → 400 для ошибок валидации."""
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": exc.errors()},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Зарегистрировать все обработчики."""
     app.add_exception_handler(DomainError, domain_error_handler)
     app.add_exception_handler(APIClientError, provider_error_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
