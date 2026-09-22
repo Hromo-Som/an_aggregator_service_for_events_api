@@ -33,6 +33,7 @@ COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser migrations/ ./migrations/
 COPY --chown=appuser:appuser alembic.ini ./
 COPY --chown=appuser:appuser pyproject.toml uv.lock ./
+COPY --chown=appuser:appuser docker/entrypoint.sh /app/entrypoint.sh
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
@@ -47,5 +48,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -fsS http://localhost:8000/api/health || exit 1
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["uvicorn", "events_aggregator.main:app", \
      "--host", "0.0.0.0", "--port", "8000"]
