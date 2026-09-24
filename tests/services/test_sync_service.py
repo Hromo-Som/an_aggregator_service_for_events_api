@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -22,7 +22,9 @@ def mock_provider() -> AsyncMock:
 
 @pytest.fixture
 def service(mock_provider: AsyncMock) -> SyncService:
-    return SyncService(mock_provider)
+    svc = SyncService(mock_provider)
+    svc._paginator = MagicMock()
+    return svc
 
 
 @pytest.fixture
@@ -111,7 +113,7 @@ async def test_sync_no_events(
     mock_session_factory: AsyncMock,
 ) -> None:
     mock_meta_repo.get.return_value = _make_meta(last_changed_at=None)
-    mock_provider.iter_all_events = _make_async_gen()
+    service._paginator.iter_all_events = _make_async_gen()
 
     result = await service.sync(full=False)
 
@@ -130,7 +132,7 @@ async def test_sync_one_event(
     sample_event: SProviderEvent,
 ) -> None:
     mock_meta_repo.get.return_value = _make_meta(last_changed_at=None)
-    mock_provider.iter_all_events = _make_async_gen(sample_event)
+    service._paginator.iter_all_events = _make_async_gen(sample_event)
 
     result = await service.sync(full=False)
 
@@ -157,7 +159,7 @@ async def test_sync_uses_max_changed_at(
     event_newer = _make_event(changed_at=newer, name="Newer")
 
     mock_meta_repo.get.return_value = _make_meta(last_changed_at=None)
-    mock_provider.iter_all_events = _make_async_gen(event_older, event_newer)
+    service._paginator.iter_all_events = _make_async_gen(event_older, event_newer)
 
     result = await service.sync(full=False)
 
@@ -180,7 +182,7 @@ async def test_sync_incremental_uses_last_changed_at(
         return
         yield
 
-    mock_provider.iter_all_events = capture_iter
+    service._paginator.iter_all_events = capture_iter
     mock_meta_repo.get.return_value = _make_meta(last_changed_at=last_changed)
 
     await service.sync(full=False)
@@ -202,7 +204,7 @@ async def test_sync_full_uses_first_date(
         return
         yield
 
-    mock_provider.iter_all_events = capture_iter
+    service._paginator.iter_all_events = capture_iter
     mock_meta_repo.get.return_value = _make_meta(
         last_changed_at=datetime(2026, 1, 1, tzinfo=UTC)
     )
@@ -225,7 +227,7 @@ async def test_sync_marks_failure_on_error(
         raise RuntimeError("Provider is down")
         yield
 
-    mock_provider.iter_all_events = failing_iter
+    service._paginator.iter_all_events = failing_iter
 
     with pytest.raises(RuntimeError):
         await service.sync(full=False)

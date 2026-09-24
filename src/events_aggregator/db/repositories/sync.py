@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from events_aggregator.db.models import SyncMetadataORM
+from events_aggregator.enums import SyncStatus
 
 
 class SyncMetadataRepository:
@@ -20,7 +21,7 @@ class SyncMetadataRepository:
                 id=1,
                 last_sync_time=None,
                 last_changed_at=None,
-                sync_status="idle",
+                sync_status=SyncStatus.IDLE,
                 last_error=None,
                 updated_at=datetime.now(UTC),
             )
@@ -32,7 +33,7 @@ class SyncMetadataRepository:
 
     async def mark_running(self) -> None:
         meta = await self.get()
-        meta.sync_status = "running"
+        meta.sync_status = SyncStatus.RUNNING
         meta.last_error = None
         meta.updated_at = datetime.now(UTC)
         await self._session.commit()
@@ -44,7 +45,7 @@ class SyncMetadataRepository:
         last_changed_at: datetime,
     ) -> None:
         meta = await self.get()
-        meta.sync_status = "success"
+        meta.sync_status = SyncStatus.SUCCESS
         meta.last_sync_time = synced_at
         meta.last_changed_at = last_changed_at
         meta.last_error = None
@@ -53,7 +54,7 @@ class SyncMetadataRepository:
 
     async def mark_failure(self, error: str) -> None:
         meta = await self.get()
-        meta.sync_status = "failed"
+        meta.sync_status = SyncStatus.FAILED
         meta.last_error = error[:2000]
         meta.updated_at = datetime.now(UTC)
         await self._session.commit()

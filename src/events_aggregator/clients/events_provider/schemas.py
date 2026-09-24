@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, EmailStr, Field
 
+from events_aggregator.enums import EventStatus
+
 
 class SProviderPlace(BaseModel):
     """Площадка проведения события."""
@@ -26,7 +28,7 @@ class SProviderEvent(BaseModel):
     place: SProviderPlace
     event_time: AwareDatetime
     registration_deadline: AwareDatetime
-    status: str = Field(
+    status: EventStatus = Field(
         ...,
         description=(
             '"new" - новое событие, еще не опубликовано, '

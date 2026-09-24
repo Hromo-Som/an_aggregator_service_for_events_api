@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from events_aggregator.clients.events_provider.client import EventsProviderClient
 from events_aggregator.clients.events_provider.exceptions import ProviderNotFound
 from events_aggregator.db.repositories.events import EventRepository
+from events_aggregator.enums import EventStatus
 from events_aggregator.schemas.event import (
     SEventDetailRead,
     SEventPageRead,
@@ -74,7 +75,7 @@ class EventService:
         if event is None:
             raise EventNotFound(f"Event {event_id} not found")
 
-        if event.status != "published":
+        if event.status != EventStatus.PUBLISHED:
             raise EventNotPublished(
                 f"Event {event_id} is not available for registration "
                 f"(status: {event.status})"

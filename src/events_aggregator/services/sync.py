@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from events_aggregator.clients.events_provider.client import EventsProviderClient
+from events_aggregator.clients.events_provider.paginator import EventsPaginator
 from events_aggregator.clients.events_provider.schemas import SProviderEvent
 from events_aggregator.config import settings
 from events_aggregator.db.repositories.events import EventRepository
@@ -33,8 +34,13 @@ class SyncService:
 
     _lock: asyncio.Lock = asyncio.Lock()
 
-    def __init__(self, provider: EventsProviderClient):
+    def __init__(
+        self,
+        provider: EventsProviderClient,
+        paginator: EventsPaginator | None = None,
+    ):
         self._provider = provider
+        self._paginator = paginator or EventsPaginator(provider)
 
     async def sync(self, *, full: bool = False) -> SyncResult:
         """Запустить синхронизацию."""
@@ -110,7 +116,7 @@ class SyncService:
         async with async_session() as session:
             event_repo = EventRepository(session)
 
-            async for event in self._provider.iter_all_events(
+            async for event in self._paginator.iter_all_events(
                 changed_at=changed_at.date().isoformat(),
             ):
                 batch.append(event)
