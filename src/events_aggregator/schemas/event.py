@@ -33,7 +33,7 @@ class SEventRead(BaseModel):
 class SEventDetailRead(SEventRead):
     """Событие в деталях — с расширенной площадкой."""
 
-    place: SEventPlaceDetailRead
+    place: SEventPlaceDetailRead  # type: ignore
 
 
 class SEventPageRead(BaseModel):

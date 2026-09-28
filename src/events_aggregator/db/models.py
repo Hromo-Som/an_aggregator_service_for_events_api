@@ -1,7 +1,8 @@
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -82,3 +83,25 @@ class SyncMetadataORM(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (CheckConstraint("id = 1", name="ck_sync_metadata_single_row"),)
+
+
+class OutboxEventORM(Base):
+    """Событие для гарантированной доставки во внешние системы."""
+
+    __tablename__ = "outbox_events"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    event_type: Mapped[str] = mapped_column(String(100))
+    payload: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    attempts: Mapped[int] = mapped_column(default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_outbox_status_created_at", "status", "created_at"),)
+
+    def __repr__(self) -> str:
+        return (
+            f"<OutboxEventORM id={self.id} type={self.event_type} status={self.status}>"
+        )

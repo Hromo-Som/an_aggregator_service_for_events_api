@@ -22,3 +22,17 @@ class SyncStatus(str, Enum):
     RUNNING = "running"
     SUCCESS = "success"
     FAILED = "failed"
+
+
+class OutboxStatus(str, Enum):
+    """Статус записи в outbox."""
+
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+
+
+class OutboxEventType(str, Enum):
+    """Тип доменного события для outbox."""
+
+    TICKET_PURCHASED = "ticket.purchased"
