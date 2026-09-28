@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -15,6 +15,7 @@ from events_aggregator.clients.events_provider.schemas import (
     SProviderRegistration,
 )
 from events_aggregator.db.models import TicketORM
+from events_aggregator.enums import OutboxEventType
 from events_aggregator.schemas.event import SEventRegistrationCreate
 from events_aggregator.services.exceptions import (
     EventNotFound,
@@ -37,7 +38,20 @@ def mock_event_repo() -> AsyncMock:
 
 
 @pytest.fixture
-def mock_ticket_repo() -> AsyncMock:
+def mock_ticket_repo() -> MagicMock:
+    repo = MagicMock()
+    repo.get_by_id = AsyncMock()
+    repo.delete = AsyncMock()
+    return repo
+
+
+@pytest.fixture
+def mock_outbox_repo() -> MagicMock:
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_session() -> AsyncMock:
     return AsyncMock()
 
 
@@ -46,11 +60,15 @@ def service(
     mock_provider: AsyncMock,
     mock_event_repo: AsyncMock,
     mock_ticket_repo: AsyncMock,
+    mock_outbox_repo: MagicMock,
+    mock_session: AsyncMock,
 ) -> TicketService:
     return TicketService(
         provider=mock_provider,
         event_repo=mock_event_repo,
         ticket_repo=mock_ticket_repo,
+        outbox_repo=mock_outbox_repo,
+        session=mock_session,
     )
 
 
@@ -70,6 +88,8 @@ async def test_register_success(
     mock_provider: AsyncMock,
     mock_event_repo: AsyncMock,
     mock_ticket_repo: AsyncMock,
+    mock_outbox_repo: MagicMock,
+    mock_session: AsyncMock,
     register_payload: SEventRegistrationCreate,
     event_orm,
 ) -> None:
@@ -82,14 +102,47 @@ async def test_register_success(
     ticket_id = uuid4()
     mock_provider.register.return_value = SProviderRegistration(ticket_id=ticket_id)
 
-    result = await service.register(register_payload)
+    await service.register(register_payload)
 
-    assert result.ticket_id == ticket_id
-    mock_ticket_repo.create.assert_awaited_once()
-    call_kwargs = mock_ticket_repo.create.await_args.kwargs
-    assert call_kwargs["ticket_id"] == ticket_id
-    assert call_kwargs["event_id"] == register_payload.event_id
-    assert call_kwargs["seat"] == "A15"
+    mock_ticket_repo.add.assert_called_once()
+    ticket_arg = mock_ticket_repo.add.call_args.args[0]
+    assert ticket_arg.ticket_id == ticket_id
+    assert ticket_arg.seat == "A15"
+
+    mock_outbox_repo.add.assert_called_once()
+    outbox_kwargs = mock_outbox_repo.add.call_args.kwargs
+    assert outbox_kwargs["event_type"] == OutboxEventType.TICKET_PURCHASED
+    assert outbox_kwargs["payload"]["ticket_id"] == str(ticket_id)
+    assert outbox_kwargs["payload"]["email"] == "ivan@example.com"
+    assert outbox_kwargs["payload"]["event_name"] == event_orm.name
+
+    mock_session.commit.assert_awaited_once()
+
+
+async def test_register_rollback_on_commit_failure(
+    service: TicketService,
+    mock_provider: AsyncMock,
+    mock_event_repo: AsyncMock,
+    mock_ticket_repo: MagicMock,
+    mock_outbox_repo: MagicMock,
+    mock_session: AsyncMock,
+    register_payload: SEventRegistrationCreate,
+    event_orm,
+) -> None:
+    event_orm.id = register_payload.event_id
+    mock_event_repo.get_by_id.return_value = event_orm
+    mock_provider.get_available_seats.return_value = SProviderAvailableSeats(
+        seats=["A15"]
+    )
+    mock_provider.register.return_value = SProviderRegistration(ticket_id=uuid4())
+
+    mock_session.commit.side_effect = RuntimeError("DB connection lost")
+
+    with pytest.raises(RuntimeError, match="DB connection lost"):
+        await service.register(register_payload)
+
+    mock_ticket_repo.add.assert_called_once()
+    mock_outbox_repo.add.assert_called_once()
 
 
 async def test_register_event_not_found(

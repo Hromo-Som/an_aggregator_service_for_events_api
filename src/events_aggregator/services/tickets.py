@@ -2,6 +2,8 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from events_aggregator.clients.events_provider.client import EventsProviderClient
 from events_aggregator.clients.events_provider.exceptions import (
     ProviderBadRequest,
@@ -10,8 +12,11 @@ from events_aggregator.clients.events_provider.exceptions import (
 from events_aggregator.clients.events_provider.schemas import (
     SProviderRegistrationCreate,
 )
+from events_aggregator.db.models import TicketORM
 from events_aggregator.db.repositories.events import EventRepository
+from events_aggregator.db.repositories.outbox import OutboxRepository
 from events_aggregator.db.repositories.tickets import TicketRepository
+from events_aggregator.enums import OutboxEventType
 from events_aggregator.schemas.event import (
     SEventCancellationRead,
     SEventRegistrationCreate,
@@ -38,10 +43,14 @@ class TicketService:
         provider: EventsProviderClient,
         event_repo: EventRepository,
         ticket_repo: TicketRepository,
+        outbox_repo: OutboxRepository,
+        session: AsyncSession,
     ) -> None:
         self._provider = provider
         self._event_repo = event_repo
         self._ticket_repo = ticket_repo
+        self._outbox_repo = outbox_repo
+        self._session = session
 
     async def register(
         self,
@@ -79,14 +88,31 @@ class TicketService:
         except ProviderBadRequest as e:
             raise SeatAlreadyTaken(f"Seat {payload.seat} is not available") from e
 
-        await self._ticket_repo.create(
+        ticket = TicketORM(
             ticket_id=result.ticket_id,
             event_id=payload.event_id,
             first_name=payload.first_name,
             last_name=payload.last_name,
             email=payload.email,
             seat=payload.seat,
+            created_at=datetime.now(UTC),
         )
+
+        self._ticket_repo.add(ticket)
+        self._outbox_repo.add(
+            event_type=OutboxEventType.TICKET_PURCHASED,
+            payload={
+                "ticket_id": str(result.ticket_id),
+                "event_id": str(payload.event_id),
+                "event_name": event.name,
+                "first_name": payload.first_name,
+                "last_name": payload.last_name,
+                "email": payload.email,
+                "seat": payload.seat,
+            },
+        )
+
+        await self._session.commit()
 
         seats_cache.invalidate(str(payload.event_id))
 

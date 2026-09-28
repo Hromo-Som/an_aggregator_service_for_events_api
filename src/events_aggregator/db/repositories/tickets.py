@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,28 +9,11 @@ class TicketRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(
+    def add(
         self,
-        *,
-        ticket_id: UUID,
-        event_id: UUID,
-        first_name: str,
-        last_name: str,
-        email: str,
-        seat: str,
+        ticket: TicketORM,
     ) -> TicketORM:
-        ticket = TicketORM(
-            ticket_id=ticket_id,
-            event_id=event_id,
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            seat=seat,
-            created_at=datetime.now(UTC),
-        )
         self._session.add(ticket)
-        await self._session.commit()
-        await self._session.refresh(ticket)
         return ticket
 
     async def get_by_id(self, ticket_id: UUID) -> TicketORM | None:
