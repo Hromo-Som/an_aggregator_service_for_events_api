@@ -105,3 +105,18 @@ class OutboxEventORM(Base):
         return (
             f"<OutboxEventORM id={self.id} type={self.event_type} status={self.status}>"
         )
+
+
+class IdempotencyRecordORM(Base):
+    """Запись идемпотентности: ключ → результат успешной операции."""
+
+    __tablename__ = "idempotency_keys"
+
+    key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    response_body: Mapped[dict] = mapped_column(JSON)
+    status_code: Mapped[int]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    def __repr__(self) -> str:
+        return f"<IdempotencyRecordORM key={self.key}>"

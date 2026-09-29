@@ -60,6 +60,16 @@ class SEventRegistrationCreate(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     seat: str = Field(..., min_length=1, max_length=10)
+    idempotency_key: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=255,
+        description=(
+            "Ключ идемпотентности. Повторный запрос с тем же ключом "
+            "и теми же данными вернёт сохранённый ticket_id без "
+            "создания нового билета."
+        ),
+    )
 
 
 class SEventRegistrationRead(BaseModel):

@@ -150,3 +150,22 @@ async def test_unregister_invalid_uuid_returns_400(
 ) -> None:
     response = await api_client.delete("/api/tickets/not-a-uuid")
     assert response.status_code == codes.BAD_REQUEST
+
+
+async def test_register_passes_idempotency_key(
+    api_client: AsyncClient,
+    mock_ticket_service: AsyncMock,
+) -> None:
+    """idempotency_key из тела доходит до сервиса."""
+    mock_ticket_service.register.return_value = SEventRegistrationRead(
+        ticket_id=TICKET_ID,
+    )
+
+    response = await api_client.post(
+        "/api/tickets",
+        json=_payload(idempotency_key="test-key-abc"),
+    )
+
+    assert response.status_code == codes.CREATED
+    call_payload = mock_ticket_service.register.await_args.args[0]
+    assert call_payload.idempotency_key == "test-key-abc"

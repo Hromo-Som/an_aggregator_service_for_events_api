@@ -2,7 +2,7 @@ import asyncio
 import logging
 from uuid import UUID
 
-from fastapi import status
+from httpx import codes
 
 from events_aggregator.clients.capashino.client import CapashinoClient
 from events_aggregator.clients.capashino.exceptions import CapashinoPermanentError
@@ -86,7 +86,7 @@ class OutboxPublisher:
             )
             await repo.mark_failed_attempt(event, error=str(e), max_attempts=1)
         except APIClientError as e:
-            if e.status_code == status.HTTP_409_CONFLICT:
+            if e.status_code == codes.CONFLICT:
                 logger.warning(
                     "outbox_idempotent_conflict id=%s -> treat as sent",
                     event.id,

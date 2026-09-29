@@ -4,6 +4,7 @@ from fastapi import Depends, Request
 
 from events_aggregator.clients.events_provider.client import EventsProviderClient
 from events_aggregator.db.repositories.events import EventRepository
+from events_aggregator.db.repositories.idempotency import IdempotencyRepository
 from events_aggregator.db.repositories.outbox import OutboxRepository
 from events_aggregator.db.repositories.tickets import TicketRepository
 from events_aggregator.db.session import SessionDep
@@ -40,6 +41,7 @@ def get_ticket_service(
         event_repo=EventRepository(session),
         ticket_repo=TicketRepository(session),
         outbox_repo=OutboxRepository(session),
+        idempotency_repo=IdempotencyRepository(session),
         session=session,
     )
 

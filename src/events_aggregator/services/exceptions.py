@@ -28,3 +28,7 @@ class RegistrationDeadlinePassed(DomainError):
 
 class EventNotPublished(DomainError):
     """Событие ещё не опубликовано."""
+
+
+class IdempotencyConflict(DomainError):
+    """Ключ идемпотентности уже использован с другими данными."""

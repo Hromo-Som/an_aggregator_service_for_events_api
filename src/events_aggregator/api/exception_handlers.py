@@ -11,6 +11,7 @@ from events_aggregator.clients.exceptions import APIClientError
 from events_aggregator.services.exceptions import (
     DomainError,
     EventNotFound,
+    IdempotencyConflict,
     NoAvailableSeats,
     RegistrationDeadlinePassed,
     RegistrationNotFound,
@@ -23,6 +24,7 @@ _STATUS_MAP: dict[type[DomainError], int] = {
     NoAvailableSeats: status.HTTP_400_BAD_REQUEST,
     SeatAlreadyTaken: status.HTTP_400_BAD_REQUEST,
     RegistrationDeadlinePassed: status.HTTP_400_BAD_REQUEST,
+    IdempotencyConflict: status.HTTP_409_CONFLICT,
 }
 
 
@@ -45,7 +47,7 @@ async def provider_error_handler(request: Request, exc: Exception) -> JSONRespon
         )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": str(exc)},
+        content={"detail": "Upstream provider error"},
     )
 
 
@@ -71,6 +73,6 @@ async def validation_exception_handler(
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Зарегистрировать все обработчики."""
-    app.add_exception_handler(DomainError, domain_error_handler)
+    app.add_exception_handler(DomainError, domain_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(APIClientError, provider_error_handler)
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]

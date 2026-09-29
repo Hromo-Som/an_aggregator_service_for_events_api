@@ -9,6 +9,7 @@ from events_aggregator.clients.events_provider.schemas import (
     SProviderEvent,
     SProviderPlace,
 )
+from events_aggregator.enums import EventStatus
 from events_aggregator.services.sync import (
     SyncAlreadyRunning,
     SyncService,
@@ -71,7 +72,7 @@ def _make_event(
         ),
         event_time=now + timedelta(days=1),
         registration_deadline=now + timedelta(hours=12),
-        status="published",
+        status=EventStatus.PUBLISHED,
         number_of_visitors=0,
         changed_at=changed_at or now,
         created_at=now,
