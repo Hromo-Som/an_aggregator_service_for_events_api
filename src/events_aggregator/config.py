@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     sync_batch_size: int = 200
     sync_first_date: str = "2000-01-01"
 
+    capashino_base_url: str
+    capashino_api_key: SecretStr = SecretStr("")
+    capashino_timeout: float = 10.0
+
+    outbox_poll_interval: float = 5.0
+    outbox_batch_size: int = 100
+    outbox_max_attempts: int = 5
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -34,4 +42,4 @@ class Settings(BaseSettings):
     )
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]
