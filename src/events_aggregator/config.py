@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     outbox_batch_size: int = 100
     outbox_max_attempts: int = 5
 
+    sentry_dsn: SecretStr = SecretStr("")
+    environment: str = "development"
+    release: str = "dev"
+    sentry_traces_sample_rate: float = 0.0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

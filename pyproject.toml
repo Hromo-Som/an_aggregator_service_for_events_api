@@ -18,6 +18,7 @@ dependencies = [
     "uvicorn>=0.53.0",
     "apscheduler>=3.11.3",
     "cachetools>=7.2.0",
+    "sentry-sdk[fastapi]>=2.71.0",
 ]
 
 [build-system]

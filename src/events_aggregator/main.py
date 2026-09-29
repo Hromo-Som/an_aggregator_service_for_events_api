@@ -4,17 +4,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from events_aggregator.api.exception_handlers import register_exception_handlers
+from events_aggregator.api.router import router as api_router
+from events_aggregator.clients.capashino.client import CapashinoClient
+from events_aggregator.clients.events_provider.client import EventsProviderClient
+from events_aggregator.config import settings
+from events_aggregator.monitoring import setup_sentry
 from events_aggregator.scheduler import scheduler, setup_scheduler
 from events_aggregator.services.outbox_publisher import OutboxPublisher
 from events_aggregator.services.sync import SyncService
 
-from .api.exception_handlers import register_exception_handlers
-from .api.router import router as api_router
-from .clients.capashino.client import CapashinoClient
-from .clients.events_provider.client import EventsProviderClient
-from .config import settings
-
 logger = logging.getLogger(__name__)
+
+setup_sentry()
 
 
 @asynccontextmanager
@@ -70,5 +72,5 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 
 
-register_exception_handlers(app)
 app.include_router(api_router)
+register_exception_handlers(app)
