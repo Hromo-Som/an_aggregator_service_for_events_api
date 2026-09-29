@@ -5,10 +5,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from events_aggregator.scheduler import scheduler, setup_scheduler
+from events_aggregator.services.outbox_publisher import OutboxPublisher
 from events_aggregator.services.sync import SyncService
 
 from .api.exception_handlers import register_exception_handlers
 from .api.router import router as api_router
+from .clients.capashino.client import CapashinoClient
 from .clients.events_provider.client import EventsProviderClient
 from .config import settings
 
@@ -24,6 +26,16 @@ async def lifespan(app: FastAPI):
         timeout=settings.events_provider_timeout,
     )
     app.state.provider = provider
+
+    capashino = CapashinoClient(
+        base_url=settings.capashino_base_url,
+        api_key=settings.capashino_api_key.get_secret_value(),
+        timeout=settings.capashino_timeout,
+    )
+    app.state.capashino = capashino
+
+    publisher = OutboxPublisher(capashino)
+    publisher_task = asyncio.create_task(publisher.run())
 
     async def initial_sync() -> None:
         try:
@@ -42,6 +54,16 @@ async def lifespan(app: FastAPI):
 
     if scheduler.running:
         scheduler.shutdown(wait=False)
+
+    publisher.stop()
+
+    try:
+        await asyncio.wait_for(publisher_task, timeout=5.0)
+    except TimeoutError:
+        logger.warning("outbox_publisher_shutdown_timeout")
+        publisher_task.cancel()
+
+    await capashino.aclose()
     await provider.aclose()
 
 
