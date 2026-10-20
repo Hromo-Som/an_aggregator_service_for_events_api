@@ -11,8 +11,12 @@ from sqlalchemy.ext.asyncio import (
 
 from events_aggregator.config import settings
 
+database_url = settings.database_url or (
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/events"
+)
+
 engine: AsyncEngine = create_async_engine(
-    url=settings.database_url,
+    url=database_url,
     echo=settings.db_echo,
     pool_size=settings.db_pool_size,
     max_overflow=settings.db_max_overflow,

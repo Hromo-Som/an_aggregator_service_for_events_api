@@ -1,22 +1,35 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
-
-from events_aggregator.config import settings
-from events_aggregator.db.base import Base
 from events_aggregator.db import models  # noqa: F401
+from events_aggregator.db.base import Base
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", settings.database_url)
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    conn_str = os.getenv("POSTGRES_CONNECTION_STRING")
+    if conn_str:
+        if conn_str.startswith("postgres://"):
+            database_url = "postgresql+asyncpg://" + conn_str[len("postgres://") :]
+        elif conn_str.startswith("postgresql://"):
+            database_url = "postgresql+asyncpg://" + conn_str[len("postgresql://") :]
+        else:
+            database_url = conn_str
+
+if not database_url:
+    database_url = "postgresql+asyncpg://postgres:postgres@localhost:5432/events"
+
+config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
 

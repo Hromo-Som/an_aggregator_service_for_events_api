@@ -1,4 +1,4 @@
-from pydantic import SecretStr
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     events_provider_timeout: float = 10.0
     events_provider_max_retries: int = 3
 
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/events"
+    postgres_connection_string: str | None = None
+    database_url: str | None = None
     db_echo: bool = False
     db_pool_size: int = 20
     db_max_overflow: int = 10
@@ -38,6 +39,24 @@ class Settings(BaseSettings):
     environment: str = "development"
     release: str = "dev"
     sentry_traces_sample_rate: float = 0.0
+
+    @model_validator(mode="after")
+    def _build_database_url(self) -> Settings:
+        """Собрать database_url из postgres_connection_string, если не задан."""
+        if self.database_url:
+            return self
+        if self.postgres_connection_string:
+            url = self.postgres_connection_string
+            if url.startswith("postgres://"):
+                url = "postgresql+asyncpg://" + url[len("postgres://") :]
+            elif url.startswith("postgresql://"):
+                url = "postgresql+asyncpg://" + url[len("postgresql://") :]
+            self.database_url = url
+            return self
+        self.database_url = (
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/events"
+        )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",
