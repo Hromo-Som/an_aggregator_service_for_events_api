@@ -102,11 +102,9 @@ async def metrics(session: SessionDep) -> Response:
     tickets_repo = TicketRepository(session)
     outbox_repo = OutboxRepository(session)
 
-    events_count, tickets_count, cancelled_count = await asyncio.gather(
-        events_repo.count(),
-        tickets_repo.count(),
-        outbox_repo.count_by_type(OutboxEventType.TICKET_CANCELLED),
-    )
+    events_count = await events_repo.count()
+    tickets_count = await tickets_repo.count()
+    cancelled_count = await outbox_repo.count_by_type(OutboxEventType.TICKET_CANCELLED)
 
     EVENTS_TOTAL.set(events_count)
     TICKETS_CREATED_TOTAL.set(tickets_count)
