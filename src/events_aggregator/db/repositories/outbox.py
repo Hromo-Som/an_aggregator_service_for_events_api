@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from events_aggregator.db.models import OutboxEventORM
@@ -65,3 +65,13 @@ class OutboxRepository:
         if event.attempts >= max_attempts:
             event.status = OutboxStatus.FAILED
         await self._session.commit()
+
+    async def count_by_type(self, event_type: str) -> int:
+        """Количество outbox-событий заданного типа."""
+        stmt = (
+            select(func.count())
+            .select_from(OutboxEventORM)
+            .where(OutboxEventORM.event_type == event_type)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one()

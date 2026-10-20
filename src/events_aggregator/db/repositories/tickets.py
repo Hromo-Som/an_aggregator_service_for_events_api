@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from events_aggregator.db.models import TicketORM
@@ -22,3 +23,8 @@ class TicketRepository:
     async def delete(self, ticket: TicketORM) -> None:
         await self._session.delete(ticket)
         await self._session.commit()
+
+    async def count(self) -> int:
+        stmt = select(func.count()).select_from(TicketORM)
+        result = await self._session.execute(stmt)
+        return result.scalar_one()

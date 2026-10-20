@@ -121,6 +121,9 @@ class OutboxPublisher:
         """Роутинг события по типу."""
         if event.event_type == OutboxEventType.TICKET_PURCHASED:
             await self._send_ticket_purchased(event)
+        elif event.event_type == OutboxEventType.TICKET_CANCELLED:
+            logger.debug("outbox_ticket_cancelled_ack id=%s", event.id)
+            return
         else:
             raise ValueError("unknown event type")
 

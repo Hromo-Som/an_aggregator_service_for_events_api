@@ -49,7 +49,7 @@ class EventRepository:
     async def events_list(
         self,
         *,
-        date_from: date | None,
+        date_from: date | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[EventORM]:
@@ -69,7 +69,7 @@ class EventRepository:
     async def count(
         self,
         *,
-        date_from: date | None,
+        date_from: date | None = None,
     ) -> int:
         """Количество событий с учётом фильтра."""
         stmt = select(func.count()).select_from(EventORM)

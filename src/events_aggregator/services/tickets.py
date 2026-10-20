@@ -28,13 +28,13 @@ from events_aggregator.schemas.event import (
 from events_aggregator.services.cache import seats_cache
 from events_aggregator.services.exceptions import (
     EventNotFound,
-    EventNotPublished,
     IdempotencyConflict,
     NoAvailableSeats,
     RegistrationDeadlinePassed,
     RegistrationNotFound,
     SeatAlreadyTaken,
 )
+from events_aggregator.services.seats import resolve_available_seats
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,11 @@ class TicketService:
                 f"Registration deadline passed for event {payload.event_id}"
             )
 
-        available = await self._get_seats(payload.event_id)
+        available = await resolve_available_seats(
+            event=event,
+            provider=self._provider,
+        )
+
         if not available:
             raise NoAvailableSeats(f"No seats available for event {payload.event_id}")
         if payload.seat not in available:
@@ -179,31 +183,19 @@ class TicketService:
         if not result.success:
             logger.warning("Provider returned success=false for ticket %s", ticket_id)
 
+        self._outbox_repo.add(
+            event_type=OutboxEventType.TICKET_CANCELLED,
+            payload={
+                "ticket_id": str(ticket_id),
+                "event_id": str(ticket.event_id),
+                "cancelled_at": datetime.now(UTC).isoformat(),
+            },
+        )
+
         await self._ticket_repo.delete(ticket)
         seats_cache.invalidate(str(ticket.event_id))
 
         return SEventCancellationRead(success=result.success)
-
-    async def _get_seats(self, event_id: UUID) -> list[str]:
-        """Свободные места — из кэша или у провайдера."""
-        event = await self._event_repo.get_by_id(event_id)
-        if event is None:
-            raise EventNotFound(f"Event {event_id} not found")
-
-        if event.status != "published":
-            raise EventNotPublished(
-                f"Event {event_id} is not available for registration "
-                f"(status: {event.status})"
-            )
-
-        cache_key = str(event_id)
-        cached = seats_cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        result = await self._provider.get_available_seats(event_id)
-        seats_cache.set(cache_key, result.seats)
-        return result.seats
 
     @staticmethod
     def _compute_request_hash(payload: SEventRegistrationCreate) -> str:

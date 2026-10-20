@@ -6,21 +6,17 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from events_aggregator.clients.events_provider.client import EventsProviderClient
-from events_aggregator.clients.events_provider.exceptions import ProviderNotFound
 from events_aggregator.db.repositories.events import EventRepository
-from events_aggregator.enums import EventStatus
 from events_aggregator.schemas.event import (
     SEventDetailRead,
     SEventPageRead,
     SEventSeatsRead,
 )
-from events_aggregator.services.cache import seats_cache
 from events_aggregator.services.converters import Converter
 from events_aggregator.services.exceptions import (
     EventNotFound,
-    EventNotPublished,
-    NoAvailableSeats,
 )
+from events_aggregator.services.seats import resolve_available_seats
 
 logger = logging.getLogger(__name__)
 
@@ -75,36 +71,14 @@ class EventService:
         if event is None:
             raise EventNotFound(f"Event {event_id} not found")
 
-        if event.status != EventStatus.PUBLISHED:
-            raise EventNotPublished(
-                f"Event {event_id} is not available for registration "
-                f"(status: {event.status})"
-            )
-
-        cache_key = str(event_id)
-
-        cached = seats_cache.get(cache_key)
-        if cached is not None:
-            return SEventSeatsRead(
-                event_id=event_id,
-                available_seats=cached,
-            )
-
-        try:
-            result = await self._provider.get_available_seats(event_id)
-        except ProviderNotFound as e:
-            logger.warning(
-                "Provider returned 404 for published event %s seats", event_id
-            )
-            raise NoAvailableSeats(
-                f"Seats are not available for event {event_id}"
-            ) from e
-
-        seats_cache.set(cache_key, result.seats)
+        seats = await resolve_available_seats(
+            event=event,
+            provider=self._provider,
+        )
 
         return SEventSeatsRead(
             event_id=event_id,
-            available_seats=result.seats,
+            available_seats=seats,
         )
 
     @staticmethod

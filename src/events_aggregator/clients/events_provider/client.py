@@ -1,8 +1,16 @@
+import time
+from collections.abc import Awaitable, Callable
+from functools import wraps
+from typing import TypeVar
 from uuid import UUID
 
 import httpx
 
 from events_aggregator.clients.base import BaseAPIClient
+from events_aggregator.monitoring.metrics import (
+    EVENTS_PROVIDER_REQUEST_DURATION,
+    EVENTS_PROVIDER_REQUESTS_TOTAL,
+)
 
 from .exceptions import (
     EventsProviderError,
@@ -19,6 +27,39 @@ from .schemas import (
     SProviderRegistration,
     SProviderRegistrationCreate,
 )
+
+T = TypeVar("T")
+
+
+def _track(
+    endpoint: str,
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
+    """Обернуть метод клиента: записать запрос и длительность в метрики."""
+
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+        @wraps(func)
+        async def wrapper(*args, **kwargs) -> T:
+            started = time.monotonic()
+            status = "error"
+            try:
+                result = await func(*args, **kwargs)
+                status = "200"
+                return result
+            except EventsProviderError as exc:
+                if exc.status_code is not None:
+                    status = str(exc.status_code)
+                raise
+            finally:
+                EVENTS_PROVIDER_REQUESTS_TOTAL.labels(
+                    endpoint=endpoint, status=status
+                ).inc()
+                EVENTS_PROVIDER_REQUEST_DURATION.labels(endpoint=endpoint).observe(
+                    time.monotonic() - started
+                )
+
+        return wrapper
+
+    return decorator
 
 
 class EventsProviderClient(BaseAPIClient):
@@ -41,11 +82,13 @@ class EventsProviderClient(BaseAPIClient):
         """Публичный доступ к base_url (для пагинатора)."""
         return self._base_url
 
+    @_track("/events")
     async def get_events_page(self, url: str) -> EventsPage:
         """Получить конкретную страницу по URL (для пагинатора)."""
         data = await self._request("GET", url)
         return self._parse(EventsPage, data)
 
+    @_track("/events")
     async def get_events_list(
         self,
         changed_at: str | None = None,
@@ -59,6 +102,7 @@ class EventsProviderClient(BaseAPIClient):
 
         return self._parse(EventsPage, data)
 
+    @_track("/seats")
     async def get_available_seats(
         self,
         event_id: UUID,
@@ -67,6 +111,7 @@ class EventsProviderClient(BaseAPIClient):
         data = await self._request("GET", f"/events/{event_id}/seats/")
         return self._parse(SProviderAvailableSeats, data)
 
+    @_track("/registration")
     async def register(
         self,
         event_id: UUID,
@@ -80,6 +125,7 @@ class EventsProviderClient(BaseAPIClient):
         )
         return self._parse(SProviderRegistration, data)
 
+    @_track("/registration")
     async def unregister(
         self,
         event_id: UUID,

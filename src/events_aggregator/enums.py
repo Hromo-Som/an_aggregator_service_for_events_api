@@ -36,3 +36,4 @@ class OutboxEventType(str, Enum):
     """Тип доменного события для outbox."""
 
     TICKET_PURCHASED = "ticket.purchased"
+    TICKET_CANCELLED = "ticket.cancelled"
